@@ -190,7 +190,7 @@
 <div id="main">
   <div id="map-container">
     <div id="map-inner">
-      <img id="map-img" src="plat-map-clean.jpg" alt="Plat Map">
+      <img id="map-img" src="plat-map-clean.png" alt="Plat Map">
       <svg id="lot-svg"></svg>
     </div>
     <div id="zoom-controls">
@@ -227,23 +227,22 @@
 // Coordinates detected via computer vision from black box reference PDF
 
 const LOT_DATA = [
-  // ── Left column — Hiawatha Ave (7 lots) ──
-  // Coordinates detected from black box reference (2455×1114 image)
-  { id:1,  col:'L', street:'Hiawatha Ave', quickRef:'Lot 1 \u2014 N End', acres:'0.09', sqft:'3,920',  note:'', cx:793, cy:85,  lotW:126 },
-  { id:2,  col:'L', street:'Hiawatha Ave', quickRef:'Lot 2',             acres:'0.09', sqft:'3,920',  note:'', cx:770, cy:166, lotW:126 },
-  { id:3,  col:'L', street:'Hiawatha Ave', quickRef:'Lot 3',             acres:'0.09', sqft:'3,920',  note:'', cx:756, cy:208, lotW:126 },
-  { id:4,  col:'L', street:'Hiawatha Ave', quickRef:'Lot 4',             acres:'0.09', sqft:'3,920',  note:'', cx:740, cy:252, lotW:126 },
-  { id:5,  col:'L', street:'Hiawatha Ave', quickRef:'Lot 5',             acres:'0.09', sqft:'3,920',  note:'', cx:727, cy:294, lotW:126 },
-  { id:6,  col:'L', street:'Hiawatha Ave', quickRef:'Lot 6',             acres:'0.09', sqft:'3,920',  note:'', cx:701, cy:383, lotW:126 },
-  { id:7,  col:'L', street:'Hiawatha Ave', quickRef:'Lot 7 \u2014 S End', acres:'0.09', sqft:'3,920',  note:'', cx:674, cy:466, lotW:126 },
-  // ══ Right column — Cissna Ave (7 lots) ══
-  { id:8,  col:'R', street:'Cissna Ave', quickRef:'Lot 8 \u2014 N End',   acres:'0.09', sqft:'3,920',  note:'', cx:947, cy:133, lotW:110 },
-  { id:9,  col:'R', street:'Cissna Ave', quickRef:'Lot 9',               acres:'0.09', sqft:'3,920',  note:'', cx:886, cy:330, lotW:110 },
-  { id:10, col:'R', street:'Cissna Ave', quickRef:'Lot 10',              acres:'0.09', sqft:'3,920',  note:'', cx:866, cy:381, lotW:110 },
-  { id:11, col:'R', street:'Cissna Ave', quickRef:'Lot 11',              acres:'0.09', sqft:'3,920',  note:'', cx:850, cy:429, lotW:110 },
-  { id:12, col:'R', street:'Cissna Ave', quickRef:'Lot 12',              acres:'0.09', sqft:'3,920',  note:'', cx:838, cy:474, lotW:110 },
-  { id:13, col:'R', street:'Cissna Ave', quickRef:'Lot 13',              acres:'0.09', sqft:'3,920',  note:'', cx:812, cy:549, lotW:110 },
-  { id:14, col:'R', street:'Cissna Ave', quickRef:'Lot 14 \u2014 Large',  acres:'0.27', sqft:'11,760', note:'', cx:800, cy:599, lotW:110, large:true },
+  // Hiawatha Ave (West) — 7 lots
+  { id:1,  col:'L', street:'Hiawatha Ave', address:'2951 Hiawatha St, Kansas City, KS 66104', parcel:'115608', stateId:'1050193201015002000', quickRef:'R6368', acres:'0.173',  sqft:'7,536',  note:'', cx:793, cy:85,  lotW:126 },
+  { id:2,  col:'L', street:'Hiawatha Ave', address:'2945 Hiawatha St, Kansas City, KS 66104', parcel:'115606', stateId:'1050193201015004000', quickRef:'R6370', acres:'0.1269', sqft:'5,528',  note:'', cx:770, cy:166, lotW:126 },
+  { id:3,  col:'L', street:'Hiawatha Ave', address:'2943 Hiawatha St, Kansas City, KS 66104', parcel:'115605', stateId:'1050193201015005000', quickRef:'R6371', acres:'0.176',  sqft:'7,667',  note:'', cx:756, cy:208, lotW:126 },
+  { id:4,  col:'L', street:'Hiawatha Ave', address:'2939 Hiawatha St, Kansas City, KS 66104', parcel:'115604', stateId:'1050193201015006000', quickRef:'R6372', acres:'0.1304', sqft:'5,680',  note:'', cx:740, cy:252, lotW:126 },
+  { id:5,  col:'L', street:'Hiawatha Ave', address:'2935 Hiawatha St, Kansas City, KS 66104', parcel:'115603', stateId:'1050193201015007000', quickRef:'R6373', acres:'0.1688', sqft:'7,353',  note:'', cx:727, cy:294, lotW:126 },
+  { id:6,  col:'L', street:'Hiawatha Ave', address:'2927 Hiawatha St, Kansas City, KS 66104', parcel:'115601', stateId:'1050193201015009000', quickRef:'R6375', acres:'0.194',  sqft:'8,451',  note:'', cx:701, cy:383, lotW:126 },
+  { id:7,  col:'L', street:'Hiawatha Ave', address:'2923 Hiawatha St, Kansas City, KS 66104', parcel:'907118',  stateId:'1050193201015011000', quickRef:'R6377', acres:'0.1367', sqft:'5,955',  note:'', cx:674, cy:466, lotW:126 },
+  // Cissna Ave (East) — 7 lots
+  { id:8,  col:'R', street:'Cissna Ave', address:'2950 Cissna St, Kansas City, KS 66104', parcel:'115589', stateId:'1050193201015001000', quickRef:'R6367', acres:'0.1507', sqft:'6,564',  note:'', cx:947, cy:133, lotW:110 },
+  { id:9,  col:'R', street:'Cissna Ave', address:'2934 Cissna St, Kansas City, KS 66104', parcel:'115592', stateId:'1050193201015027000', quickRef:'R6393', acres:'0.1467', sqft:'6,390',  note:'', cx:886, cy:330, lotW:110 },
+  { id:10, col:'R', street:'Cissna Ave', address:'2930 Cissna St, Kansas City, KS 66104', parcel:'115593', stateId:'1050193201015026000', quickRef:'R6392', acres:'0.1513', sqft:'6,591',  note:'', cx:866, cy:381, lotW:110 },
+  { id:11, col:'R', street:'Cissna Ave', address:'2926 Cissna St, Kansas City, KS 66104', parcel:'115594', stateId:'1050193201015025000', quickRef:'R6391', acres:'0.1472', sqft:'6,412',  note:'', cx:850, cy:429, lotW:110 },
+  { id:12, col:'R', street:'Cissna Ave', address:'2922 Cissna St, Kansas City, KS 66104', parcel:'115595', stateId:'1050193201015024000', quickRef:'R6390', acres:'0.1108', sqft:'4,826',  note:'', cx:838, cy:474, lotW:110 },
+  { id:13, col:'R', street:'Cissna Ave', address:'2914 Cissna St, Kansas City, KS 66104', parcel:'115597', stateId:'1050193201015022000', quickRef:'R6388', acres:'0.147',  sqft:'6,403',  note:'', cx:812, cy:549, lotW:110 },
+  { id:14, col:'R', street:'Cissna Ave', address:'2912 Cissna St, Kansas City, KS 66104', parcel:'115598', stateId:'1050193201015021000', quickRef:'R6387', acres:'0.1491', sqft:'6,495',  note:'', cx:800, cy:599, lotW:110, large:true },
 ];
 
 // Standard lot dimensions in the lot's local (rotated) frame
@@ -336,8 +335,10 @@ function renderDetail(id) {
 
   document.getElementById('lot-detail').innerHTML = `
     <div class="detail-title">Lot ${lot.id} — ${lot.street}</div>
-    <div class="detail-addr">${lot.quickRef} · Wyandotte County Landbank</div>
-    <div class="detail-row"><span class="label">Street</span><span class="value">${lot.street}</span></div>
+    <div class="detail-addr">${lot.address}</div>
+    <div class="detail-row"><span class="label">Parcel #</span><span class="value">${lot.parcel}</span></div>
+    <div class="detail-row"><span class="label">Quick Ref</span><span class="value">${lot.quickRef}</span></div>
+    <div class="detail-row"><span class="label">State ID</span><span class="value" style="font-size:10px">${lot.stateId}</span></div>
     <div class="detail-row"><span class="label">Acres</span><span class="value">${lot.acres}</span></div>
     <div class="detail-row"><span class="label">Est. Sq Ft</span><span class="value">${lot.sqft}</span></div>
     <div class="detail-row"><span class="label">Status</span><span class="value" style="color:${statusColors[s.status]}">${statusLabels[s.status]}</span></div>
@@ -383,7 +384,7 @@ function renderList() {
     el.innerHTML = lots.map(lot => `
       <div class="lot-item ${selectedId===lot.id?'active':''}" onclick="selectLot(${lot.id})">
         <div class="lot-dot" style="background:${statusDot[state[lot.id].status]}"></div>
-        <span class="lot-item-name">Lot ${lot.id}</span>
+        <span class="lot-item-name">Lot ${lot.id} <span style="font-size:10px;color:#64748b;display:block">${lot.address.split(',')[0]}</span></span>
         <span class="lot-item-status status-${state[lot.id].status}">${statusLabel[state[lot.id].status]}</span>
       </div>
     `).join('');
@@ -410,7 +411,7 @@ function showTooltip(lot, e) {
   }
   const s = state[lot.id];
   const labels = {available:'Available',contract:'Under Contract',sold:'Sold',reserved:'Reserved'};
-  tooltip.innerHTML = `<strong>Lot ${lot.id}</strong> — ${lot.street}<br>${lot.acres} ac · ${labels[s.status]}`;
+  tooltip.innerHTML = `<strong>Lot ${lot.id}</strong> — ${lot.address}<br>${lot.acres} ac · ${labels[s.status]}`;
   tooltip.style.display = 'block';
   tooltip.style.left = (e.clientX+12)+'px';
   tooltip.style.top = (e.clientY-10)+'px';
