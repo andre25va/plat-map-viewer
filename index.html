@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dot Lots — Interactive Plat Map</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a1a; color: #eee; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  #header { background: #2a2a2a; padding: 10px 16px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; border-bottom: 1px solid #3a3a3a; }
+  #header h1 { font-size: 16px; font-weight: 700; color: #22c55e; }
+  .stat-pill { background: #3a3a3a; border-radius: 20px; padding: 4px 12px; font-size: 12px; }
+  .stat-pill span { font-weight: 700; }
+  .stat-avail span { color: #4ade80; }
+  .stat-contract span { color: #f59e0b; }
+  .stat-sold span { color: #ef4444; }
+
+  #main { display: flex; flex: 1; overflow: hidden; }
+
+  #map-container {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    cursor: grab;
+    user-select: none;
+  }
+  #map-container.grabbing { cursor: grabbing; }
+
+  #map-inner {
+    position: absolute;
+    transform-origin: 0 0;
+    transform: scale(1) translate(0px, 0px);
+  }
+
+  #map-inner img { display: block; }
+
+  #lot-svg {
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: none;
+  }
+
+  .lot-poly {
+    pointer-events: all;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    fill: #22c55e;
+    fill-opacity: 0.35;
+    stroke: #4ade80;
+    stroke-width: 2;
+  }
+  .lot-poly:hover { fill-opacity: 0.55; stroke: #86efac; stroke-width: 2.5; }
+  .lot-poly.selected { fill-opacity: 0.6; stroke: #fff; stroke-width: 3; }
+  .lot-poly.contract { fill: #f59e0b; fill-opacity: 0.4; stroke: #fbbf24; }
+  .lot-poly.sold { fill: #ef4444; fill-opacity: 0.4; stroke: #f87171; }
+  .lot-poly.reserved { fill: #3b82f6; fill-opacity: 0.4; stroke: #60a5fa; }
+
+  .lot-label {
+    pointer-events: none;
+    fill: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+    paint-order: stroke;
+    stroke: #000;
+    stroke-width: 3px;
+    stroke-linejoin: round;
+  }
+
+  #sidebar {
+    width: 280px;
+    background: #2a2a2a;
+    border-left: 1px solid #3a3a3a;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  #sidebar-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid #3a3a3a;
+    background: #3a3a3a;
+  }
+  #sidebar-header h2 { font-size: 14px; font-weight: 700; color: #86efac; }
+  #sidebar-header p { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+  #lot-detail { padding: 14px 16px; flex: 1; }
+  #lot-detail .placeholder { color: #475569; font-size: 13px; text-align: center; margin-top: 40px; }
+
+  .detail-title { font-size: 16px; font-weight: 700; color: #86efac; margin-bottom: 4px; }
+  .detail-addr { font-size: 12px; color: #94a3b8; margin-bottom: 12px; }
+
+  .detail-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #3a3a3a; font-size: 12px; }
+  .detail-row .label { color: #94a3b8; }
+  .detail-row .value { color: #e2e8f0; font-weight: 600; }
+
+  .status-select { margin-top: 14px; }
+  .status-select label { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 4px; }
+  .status-select select {
+    width: 100%;
+    background: #3a3a3a;
+    border: 1px solid #4a4a4a;
+    color: #e2e8f0;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  .notes-area { margin-top: 12px; }
+  .notes-area label { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 4px; }
+  .notes-area textarea {
+    width: 100%;
+    background: #3a3a3a;
+    border: 1px solid #4a4a4a;
+    color: #e2e8f0;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    resize: vertical;
+    min-height: 70px;
+  }
+
+  .save-btn {
+    margin-top: 10px;
+    width: 100%;
+    background: #22c55e;
+    color: #fff;
+    border: none;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .save-btn:hover { background: #16a34a; }
+
+  #zoom-controls {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .zoom-btn {
+    width: 32px; height: 32px;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    color: #e2e8f0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .zoom-btn:hover { background: #3a3a3a; }
+
+  .lot-list { padding: 0 16px 16px; }
+  .lot-list h3 { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; padding-top: 12px; }
+  .lot-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 6px; cursor: pointer;
+    font-size: 12px; margin-bottom: 2px;
+    transition: background 0.1s;
+  }
+  .lot-item:hover { background: #3a3a3a; }
+  .lot-item.active { background: #1a2e1a; }
+  .lot-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .lot-item-name { flex: 1; color: #cbd5e1; }
+  .lot-item-status { font-size: 10px; padding: 1px 6px; border-radius: 10px; }
+  .status-available { background: #4c1d95; color: #86efac; }
+  .status-contract { background: #78350f; color: #fde68a; }
+  .status-sold { background: #7f1d1d; color: #fca5a5; }
+  .status-reserved { background: #1e3a5f; color: #93c5fd; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>🗺️ Dot Lots — Wyandotte Landbank</h1>
+  <div class="stat-pill stat-avail">Available: <span id="cnt-avail">0</span></div>
+  <div class="stat-pill stat-contract">Contract: <span id="cnt-contract">0</span></div>
+  <div class="stat-pill stat-sold">Sold: <span id="cnt-sold">0</span></div>
+  <div style="margin-left:auto; font-size:11px; color:#64748b;">Scroll to zoom · Drag to pan</div>
+</div>
+
+<div id="main">
+  <div id="map-container">
+    <div id="map-inner">
+      <img id="map-img" src="plat-map-clean.jpg" alt="Plat Map">
+      <svg id="lot-svg"></svg>
+    </div>
+    <div id="zoom-controls">
+      <button class="zoom-btn" onclick="zoom(1.25)">+</button>
+      <button class="zoom-btn" onclick="zoom(0.8)">−</button>
+      <button class="zoom-btn" title="Fit" onclick="fitView()">⊡</button>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <h2>Lot Details</h2>
+      <p>Click a lot on the map</p>
+    </div>
+    <div id="lot-detail">
+      <div class="placeholder">← Select a lot on the map to view details</div>
+    </div>
+    <div class="lot-list">
+      <h3>Hiawatha Ave (West)</h3>
+      <div id="list-left"></div>
+      <h3>Cissna Ave (East)</h3>
+      <div id="list-right"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// LOT DATA — rotated rectangles aligned to yellow outlines
+// Each lot: cx/cy = center in image px, w/h = dimensions in
+// the lot's local frame, all rotated -18° to match plat angle
+// Image: 2455×1114 | Rotation: 18° (matches plat diagonal)
+// ============================================================
+// Coordinates detected via computer vision from black box reference PDF
+
+const LOT_DATA = [
+  // ── Left column — Hiawatha Ave (7 lots) ──
+  // Coordinates detected from black box reference (2455×1114 image)
+  { id:1,  col:'L', street:'Hiawatha Ave', quickRef:'Lot 1 \u2014 N End', acres:'0.09', sqft:'3,920',  note:'', cx:793, cy:85,  lotW:126 },
+  { id:2,  col:'L', street:'Hiawatha Ave', quickRef:'Lot 2',             acres:'0.09', sqft:'3,920',  note:'', cx:770, cy:166, lotW:126 },
+  { id:3,  col:'L', street:'Hiawatha Ave', quickRef:'Lot 3',             acres:'0.09', sqft:'3,920',  note:'', cx:756, cy:208, lotW:126 },
+  { id:4,  col:'L', street:'Hiawatha Ave', quickRef:'Lot 4',             acres:'0.09', sqft:'3,920',  note:'', cx:740, cy:252, lotW:126 },
+  { id:5,  col:'L', street:'Hiawatha Ave', quickRef:'Lot 5',             acres:'0.09', sqft:'3,920',  note:'', cx:727, cy:294, lotW:126 },
+  { id:6,  col:'L', street:'Hiawatha Ave', quickRef:'Lot 6',             acres:'0.09', sqft:'3,920',  note:'', cx:701, cy:383, lotW:126 },
+  { id:7,  col:'L', street:'Hiawatha Ave', quickRef:'Lot 7 \u2014 S End', acres:'0.09', sqft:'3,920',  note:'', cx:674, cy:466, lotW:126 },
+  // ══ Right column — Cissna Ave (7 lots) ══
+  { id:8,  col:'R', street:'Cissna Ave', quickRef:'Lot 8 \u2014 N End',   acres:'0.09', sqft:'3,920',  note:'', cx:947, cy:133, lotW:110 },
+  { id:9,  col:'R', street:'Cissna Ave', quickRef:'Lot 9',               acres:'0.09', sqft:'3,920',  note:'', cx:886, cy:330, lotW:110 },
+  { id:10, col:'R', street:'Cissna Ave', quickRef:'Lot 10',              acres:'0.09', sqft:'3,920',  note:'', cx:866, cy:381, lotW:110 },
+  { id:11, col:'R', street:'Cissna Ave', quickRef:'Lot 11',              acres:'0.09', sqft:'3,920',  note:'', cx:850, cy:429, lotW:110 },
+  { id:12, col:'R', street:'Cissna Ave', quickRef:'Lot 12',              acres:'0.09', sqft:'3,920',  note:'', cx:838, cy:474, lotW:110 },
+  { id:13, col:'R', street:'Cissna Ave', quickRef:'Lot 13',              acres:'0.09', sqft:'3,920',  note:'', cx:812, cy:549, lotW:110 },
+  { id:14, col:'R', street:'Cissna Ave', quickRef:'Lot 14 \u2014 Large',  acres:'0.27', sqft:'11,760', note:'', cx:800, cy:599, lotW:110, large:true },
+];
+
+// Standard lot dimensions in the lot's local (rotated) frame
+const LOT_W = 126;  // default width (left col); per-lot via lotW
+const LOT_H = 23;   // height perpendicular to major axis
+const LOT_H_LG = 46; // large lot height (2× standard)
+const LOT_ANGLE = 18; // degrees — lots tilt lower-left to upper-right — lots tilt lower-left to upper-right
+
+// Load saved state
+function loadState() {
+  try { return JSON.parse(localStorage.getItem('dot-lots-state') || '{}'); } catch { return {}; }
+}
+function saveState() {
+  localStorage.setItem('dot-lots-state', JSON.stringify(state));
+}
+
+const state = loadState();
+LOT_DATA.forEach(l => {
+  if (!state[l.id]) state[l.id] = { status: 'available', note: l.note };
+});
+
+// ============================================================
+// SVG RENDERING
+// ============================================================
+const img = document.getElementById('map-img');
+let IMG_W = 1570, IMG_H = 712;
+
+let selectedId = null;
+
+function renderSVG() {
+  const svg = document.getElementById('lot-svg');
+  svg.setAttribute('width', IMG_W);
+  svg.setAttribute('height', IMG_H);
+  svg.setAttribute('viewBox', `0 0 ${IMG_W} ${IMG_H}`);
+  svg.innerHTML = '';
+
+  LOT_DATA.forEach(lot => {
+    const status = state[lot.id].status;
+    const cx = lot.cx;
+    const cy = lot.cy;
+    const w  = lot.lotW || LOT_W;
+    const h  = lot.large ? LOT_H_LG : LOT_H;
+    const rx = lot.cx - w / 2;
+    const ry = lot.cy - h / 2;
+    const angle = lot.angle !== undefined ? lot.angle : LOT_ANGLE;
+    const tf = `rotate(${angle},${cx},${cy})`;
+
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', rx);
+    rect.setAttribute('y', ry);
+    rect.setAttribute('width', w);
+    rect.setAttribute('height', h);
+    rect.setAttribute('rx', 1);
+    rect.setAttribute('transform', tf);
+    rect.classList.add('lot-poly');
+    if (status !== 'available') rect.classList.add(status);
+    if (selectedId === lot.id) rect.classList.add('selected');
+
+    rect.addEventListener('click', () => selectLot(lot.id));
+    rect.addEventListener('mouseenter', e => showTooltip(lot, e));
+    rect.addEventListener('mouseleave', hideTooltip);
+    svg.appendChild(rect);
+
+    // Label rotates with the lot
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', cx);
+    text.setAttribute('y', cy);
+    text.setAttribute('transform', tf);
+    text.classList.add('lot-label');
+    text.textContent = lot.id;
+    svg.appendChild(text);
+  });
+}
+
+// ============================================================
+// LOT SELECTION & SIDEBAR
+// ============================================================
+function selectLot(id) {
+  selectedId = id;
+  renderSVG();
+  renderDetail(id);
+  renderList();
+}
+
+function renderDetail(id) {
+  const lot = LOT_DATA.find(l => l.id === id);
+  const s = state[id];
+  const statusColors = {available:'#4ade80',contract:'#f59e0b',sold:'#ef4444',reserved:'#3b82f6'};
+  const statusLabels = {available:'Available',contract:'Under Contract',sold:'Sold',reserved:'Reserved'};
+
+  document.getElementById('lot-detail').innerHTML = `
+    <div class="detail-title">Lot ${lot.id} — ${lot.street}</div>
+    <div class="detail-addr">${lot.quickRef} · Wyandotte County Landbank</div>
+    <div class="detail-row"><span class="label">Street</span><span class="value">${lot.street}</span></div>
+    <div class="detail-row"><span class="label">Acres</span><span class="value">${lot.acres}</span></div>
+    <div class="detail-row"><span class="label">Est. Sq Ft</span><span class="value">${lot.sqft}</span></div>
+    <div class="detail-row"><span class="label">Status</span><span class="value" style="color:${statusColors[s.status]}">${statusLabels[s.status]}</span></div>
+
+    <div class="status-select">
+      <label>Update Status</label>
+      <select id="status-sel" onchange="updateStatus(${id}, this.value)">
+        <option value="available" ${s.status==='available'?'selected':''}>✅ Available</option>
+        <option value="contract"  ${s.status==='contract'?'selected':''}>📝 Under Contract</option>
+        <option value="sold"      ${s.status==='sold'?'selected':''}>🏠 Sold</option>
+        <option value="reserved"  ${s.status==='reserved'?'selected':''}>🔒 Reserved</option>
+      </select>
+    </div>
+
+    <div class="notes-area">
+      <label>Notes</label>
+      <textarea id="lot-notes" placeholder="Add notes about this lot...">${s.note||''}</textarea>
+    </div>
+    <button class="save-btn" onclick="saveNote(${id})">💾 Save Notes</button>
+  `;
+}
+
+function updateStatus(id, status) {
+  state[id].status = status;
+  saveState();
+  renderSVG();
+  renderList();
+  updateStats();
+}
+
+function saveNote(id) {
+  const txt = document.getElementById('lot-notes');
+  if (txt) { state[id].note = txt.value; saveState(); }
+}
+
+function renderList() {
+  const statusDot = {available:'#4ade80',contract:'#f59e0b',sold:'#ef4444',reserved:'#3b82f6'};
+  const statusLabel = {available:'Available',contract:'Contract',sold:'Sold',reserved:'Reserved'};
+
+  ['list-left','list-right'].forEach((elId, ci) => {
+    const el = document.getElementById(elId);
+    const lots = LOT_DATA.filter(l => l.col === (ci===0?'L':'R'));
+    el.innerHTML = lots.map(lot => `
+      <div class="lot-item ${selectedId===lot.id?'active':''}" onclick="selectLot(${lot.id})">
+        <div class="lot-dot" style="background:${statusDot[state[lot.id].status]}"></div>
+        <span class="lot-item-name">Lot ${lot.id}</span>
+        <span class="lot-item-status status-${state[lot.id].status}">${statusLabel[state[lot.id].status]}</span>
+      </div>
+    `).join('');
+  });
+}
+
+function updateStats() {
+  const counts = {available:0,contract:0,sold:0,reserved:0};
+  LOT_DATA.forEach(l => counts[state[l.id].status]++);
+  document.getElementById('cnt-avail').textContent = counts.available;
+  document.getElementById('cnt-contract').textContent = counts.contract;
+  document.getElementById('cnt-sold').textContent = counts.sold;
+}
+
+// ============================================================
+// TOOLTIP
+// ============================================================
+let tooltip = null;
+function showTooltip(lot, e) {
+  if (!tooltip) {
+    tooltip = document.createElement('div');
+    tooltip.style.cssText = 'position:fixed;background:#1a2e1a;border:1px solid #22c55e;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:12px;pointer-events:none;z-index:999;';
+    document.body.appendChild(tooltip);
+  }
+  const s = state[lot.id];
+  const labels = {available:'Available',contract:'Under Contract',sold:'Sold',reserved:'Reserved'};
+  tooltip.innerHTML = `<strong>Lot ${lot.id}</strong> — ${lot.street}<br>${lot.acres} ac · ${labels[s.status]}`;
+  tooltip.style.display = 'block';
+  tooltip.style.left = (e.clientX+12)+'px';
+  tooltip.style.top = (e.clientY-10)+'px';
+}
+function hideTooltip() { if(tooltip) tooltip.style.display='none'; }
+
+// ============================================================
+// PAN & ZOOM
+// ============================================================
+let scale = 1, tx = 0, ty = 0;
+let dragging = false, lastX = 0, lastY = 0;
+
+const container = document.getElementById('map-container');
+const inner = document.getElementById('map-inner');
+
+function applyTransform() {
+  inner.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+}
+
+function zoom(factor, cx, cy) {
+  const rect = container.getBoundingClientRect();
+  cx = cx ?? rect.width/2;
+  cy = cy ?? rect.height/2;
+  const newScale = Math.max(0.3, Math.min(5, scale*factor));
+  tx = cx - (cx - tx)*newScale/scale;
+  ty = cy - (cy - ty)*newScale/scale;
+  scale = newScale;
+  applyTransform();
+}
+
+function fitView() {
+  const rect = container.getBoundingClientRect();
+  const s = Math.min(rect.width/IMG_W, rect.height/IMG_H) * 0.95;
+  scale = s;
+  tx = (rect.width - IMG_W*s)/2;
+  ty = (rect.height - IMG_H*s)/2;
+  applyTransform();
+}
+
+container.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = container.getBoundingClientRect();
+  zoom(e.deltaY < 0 ? 1.1 : 0.9, e.clientX-rect.left, e.clientY-rect.top);
+}, {passive:false});
+
+container.addEventListener('mousedown', e => {
+  dragging = true; lastX = e.clientX; lastY = e.clientY;
+  container.classList.add('grabbing');
+});
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  tx += e.clientX - lastX; ty += e.clientY - lastY;
+  lastX = e.clientX; lastY = e.clientY;
+  applyTransform();
+});
+window.addEventListener('mouseup', () => { dragging = false; container.classList.remove('grabbing'); });
+
+// ============================================================
+// INIT
+// ============================================================
+img.addEventListener('load', () => {
+  IMG_W = img.naturalWidth;
+  IMG_H = img.naturalHeight;
+  renderSVG();
+  renderList();
+  updateStats();
+  fitView();
+});
+if (img.complete) {
+  IMG_W = img.naturalWidth || 2455;
+  IMG_H = img.naturalHeight || 1114;
+  renderSVG();
+  renderList();
+  updateStats();
+  fitView();
+}
+</script>
+</body>
+</html>
